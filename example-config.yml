@@ -1,0 +1,11 @@
+# Example Flitz configuration file
+# Save this as ~/.flitz.yml in your home directory
+
+# Font size for the application (default: 14)
+font_size: 16
+
+# Optional: Reference external configuration files
+# These can override settings from this file
+# external_config:
+#   - /path/to/shared/config.yml
+#   - /path/to/additional/config.yml
