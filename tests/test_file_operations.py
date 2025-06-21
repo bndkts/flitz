@@ -61,11 +61,11 @@ def test_file_item_size_formatting():
 
     # Test different size ranges
     item = FileItem.__new__(FileItem)
-    item.path = MockPath(1024)
+    item.path = MockPath(1024)  # type: ignore[assignment]
     item._stat = None
     assert "1.0 KB" in item.size_str
 
-    item.path = MockPath(1024 * 1024)
+    item.path = MockPath(1024 * 1024)  # type: ignore[assignment]
     item._stat = None
     assert "1.0 MB" in item.size_str
 

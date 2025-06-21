@@ -3,7 +3,7 @@
 import os
 import shutil
 from pathlib import Path
-from typing import List
+from typing import Any, List, Optional
 
 from PyQt6.QtCore import QDateTime
 from PyQt6.QtGui import QIcon
@@ -13,12 +13,12 @@ from PyQt6.QtWidgets import QStyle
 class FileItem:
     """Represents a file or directory item."""
 
-    def __init__(self, path: Path):
+    def __init__(self, path: Path) -> None:
         self.path = path
-        self._stat = None
+        self._stat: Optional[Any] = None
 
     @property
-    def stat(self):
+    def stat(self) -> Optional[Any]:
         """Cached file statistics."""
         if self._stat is None:
             try:
@@ -37,7 +37,7 @@ class FileItem:
         """File size in bytes."""
         if self.is_directory or self.stat is None:
             return 0
-        return self.stat.st_size
+        return int(self.stat.st_size)
 
     @property
     def size_str(self) -> str:
@@ -45,7 +45,7 @@ class FileItem:
         if self.is_directory:
             return ""
 
-        size = self.size
+        size = float(self.size)
         for unit in ["B", "KB", "MB", "GB", "TB"]:
             if size < 1024.0:
                 return f"{size:.1f} {unit}"
@@ -105,7 +105,7 @@ class FileItem:
     @property
     def modified_str(self) -> str:
         """Human-readable modified time."""
-        return self.modified_time.toString("yyyy-MM-dd hh:mm:ss")
+        return str(self.modified_time.toString("yyyy-MM-dd hh:mm:ss"))
 
     def get_icon(self, style: QStyle) -> QIcon:
         """Get appropriate icon for the file type."""
@@ -119,7 +119,9 @@ class FileOperations:
     """File operations utilities."""
 
     @staticmethod
-    def list_directory(path: Path, show_hidden: bool = False) -> List[FileItem]:
+    def list_directory(
+        path: Path, show_hidden: bool = False
+    ) -> List[FileItem]:
         """List directory contents."""
         items = []
         try:

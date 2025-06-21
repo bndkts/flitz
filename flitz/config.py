@@ -1,7 +1,7 @@
 """Configuration management for Flitz."""
 
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
@@ -10,14 +10,16 @@ from pydantic import BaseModel, Field, field_validator
 class Config(BaseModel):
     """Application configuration."""
 
-    font_size: int = Field(default=14, description="Font size for the application")
+    font_size: int = Field(
+        default=14, description="Font size for the application"
+    )
     external_config: Optional[Union[str, List[str]]] = Field(
         default=None, description="Path(s) to external configuration files"
     )
 
     @field_validator("external_config", mode="before")
     @classmethod
-    def validate_external_config(cls, v):
+    def validate_external_config(cls, v: Any) -> Any:
         """Convert string to list for external_config."""
         if isinstance(v, str):
             return [v]
@@ -27,7 +29,7 @@ class Config(BaseModel):
     def load() -> "Config":
         """Load configuration from ~/.flitz.yml and external configs."""
         config_path = Path.home() / ".flitz.yml"
-        config_data = {}
+        config_data: Dict[str, Any] = {}
 
         # Load main config if it exists
         if config_path.exists():

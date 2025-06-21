@@ -3,10 +3,10 @@
 import subprocess
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QAction, QKeySequence
+from PyQt6.QtCore import QPoint, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QAction, QKeyEvent, QKeySequence
 from PyQt6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -35,12 +35,12 @@ class SearchBar(QWidget):
     search_requested = pyqtSignal(str)
     escape_pressed = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.setup_ui()
         self.hide()
 
-    def setup_ui(self):
+    def setup_ui(self) -> None:
         layout = QHBoxLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
 
@@ -52,31 +52,35 @@ class SearchBar(QWidget):
         layout.addWidget(QLabel("Search:"))
         layout.addWidget(self.search_input)
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event: Optional[QKeyEvent]) -> None:
+        if event is None:
+            return
         if event.key() == Qt.Key.Key_Escape:
             self.escape_pressed.emit()
         else:
             super().keyPressEvent(event)
 
-    def on_text_changed(self, text):
+    def on_text_changed(self, text: str) -> None:
         # Real-time search with a small delay
         if hasattr(self, "_search_timer"):
             self._search_timer.stop()
 
-        self._search_timer = QTimer()
-        self._search_timer.timeout.connect(lambda: self.search_requested.emit(text))
+        self._search_timer: QTimer = QTimer()
+        self._search_timer.timeout.connect(
+            lambda: self.search_requested.emit(text)
+        )
         self._search_timer.setSingleShot(True)
         self._search_timer.start(300)  # 300ms delay
 
-    def on_search(self):
+    def on_search(self) -> None:
         self.search_requested.emit(self.search_input.text())
 
-    def show_search(self):
+    def show_search(self) -> None:
         self.show()
         self.search_input.setFocus()
         self.search_input.selectAll()
 
-    def hide_search(self):
+    def hide_search(self) -> None:
         self.hide()
         self.search_input.clear()
 
@@ -87,15 +91,15 @@ class FileListWidget(QTreeWidget):
     path_changed = pyqtSignal(Path)
     item_renamed = pyqtSignal(Path, str)
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.setup_ui()
         self.current_path = Path.home()
         self.show_hidden = False
         self.clipboard_items: List[Path] = []
-        self.clipboard_operation = None  # 'copy' or 'cut'
+        self.clipboard_operation: Optional[str] = None  # 'copy' or 'cut'
 
-    def setup_ui(self):
+    def setup_ui(self) -> None:
         self.setHeaderLabels(["Name", "Size", "Type", "Date Modified"])
         self.setRootIsDecorated(False)
         self.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
@@ -111,16 +115,25 @@ class FileListWidget(QTreeWidget):
 
         # Adjust column widths
         header = self.header()
-        header.setStretchLastSection(False)
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        if header is not None:
+            header.setStretchLastSection(False)
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            header.setSectionResizeMode(
+                1, QHeaderView.ResizeMode.ResizeToContents
+            )
+            header.setSectionResizeMode(
+                2, QHeaderView.ResizeMode.ResizeToContents
+            )
+            header.setSectionResizeMode(
+                3, QHeaderView.ResizeMode.ResizeToContents
+            )
 
-    def load_directory(self, path: Path):
+    def load_directory(self, path: Path) -> None:
         """Load directory contents into the tree widget."""
         if not FileOperations.can_access(path):
-            QMessageBox.warning(self, "Access Denied", f"Cannot access: {path}")
+            QMessageBox.warning(
+                self, "Access Denied", f"Cannot access: {path}"
+            )
             return
 
         self.current_path = path
@@ -140,13 +153,17 @@ class FileListWidget(QTreeWidget):
                     file_item.modified_str,
                 ]
             )
-            tree_item.setIcon(0, file_item.get_icon(self.style()))
+            style = self.style()
+            if style is not None:
+                tree_item.setIcon(0, file_item.get_icon(style))
             tree_item.setData(0, Qt.ItemDataRole.UserRole, file_item.path)
             self.addTopLevelItem(tree_item)
 
         self.path_changed.emit(path)
 
-    def on_item_double_clicked(self, item: QTreeWidgetItem, column: int):
+    def on_item_double_clicked(
+        self, item: QTreeWidgetItem, column: int
+    ) -> None:
         """Handle double-click on item."""
         file_path = item.data(0, Qt.ItemDataRole.UserRole)
 
@@ -155,11 +172,13 @@ class FileListWidget(QTreeWidget):
         else:
             self.open_file(file_path)
 
-    def open_file(self, file_path: Path):
+    def open_file(self, file_path: Path) -> None:
         """Open file with default application."""
         try:
             if sys.platform == "win32":
-                subprocess.run(["start", str(file_path)], shell=True, check=True)
+                subprocess.run(
+                    ["start", str(file_path)], shell=True, check=True
+                )
             elif sys.platform == "darwin":
                 subprocess.run(["open", str(file_path)], check=True)
             else:
@@ -167,12 +186,16 @@ class FileListWidget(QTreeWidget):
         except subprocess.CalledProcessError:
             QMessageBox.warning(self, "Error", f"Could not open: {file_path}")
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event: Optional[QKeyEvent]) -> None:
+        if event is None:
+            return
         if event.key() == Qt.Key.Key_F2:
             self.rename_selected()
         elif event.key() == Qt.Key.Key_Delete:
             self.delete_selected()
-        elif event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
+        elif (
+            event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter
+        ):
             current = self.currentItem()
             if current:
                 self.on_item_double_clicked(current, 0)
@@ -185,7 +208,7 @@ class FileListWidget(QTreeWidget):
         else:
             super().keyPressEvent(event)
 
-    def show_context_menu(self, position):
+    def show_context_menu(self, position: QPoint) -> None:
         """Show context menu."""
         menu = QMenu(self)
 
@@ -213,25 +236,29 @@ class FileListWidget(QTreeWidget):
 
         menu.exec(self.mapToGlobal(position))
 
-    def create_folder(self):
+    def create_folder(self) -> None:
         """Create new folder."""
         name, ok = QInputDialog.getText(self, "Create Folder", "Folder name:")
         if ok and name:
             if FileOperations.create_folder(self.current_path, name):
                 self.load_directory(self.current_path)
             else:
-                QMessageBox.warning(self, "Error", f"Could not create folder: {name}")
+                QMessageBox.warning(
+                    self, "Error", f"Could not create folder: {name}"
+                )
 
-    def create_file(self):
+    def create_file(self) -> None:
         """Create new empty file."""
         name, ok = QInputDialog.getText(self, "Create File", "File name:")
         if ok and name:
             if FileOperations.create_file(self.current_path, name):
                 self.load_directory(self.current_path)
             else:
-                QMessageBox.warning(self, "Error", f"Could not create file: {name}")
+                QMessageBox.warning(
+                    self, "Error", f"Could not create file: {name}"
+                )
 
-    def rename_selected(self):
+    def rename_selected(self) -> None:
         """Rename selected item."""
         item = self.currentItem()
         if not item:
@@ -248,9 +275,11 @@ class FileListWidget(QTreeWidget):
                 self.load_directory(self.current_path)
                 self.item_renamed.emit(file_path, new_name)
             else:
-                QMessageBox.warning(self, "Error", f"Could not rename to: {new_name}")
+                QMessageBox.warning(
+                    self, "Error", f"Could not rename to: {new_name}"
+                )
 
-    def delete_selected(self):
+    def delete_selected(self) -> None:
         """Delete selected items."""
         selected_items = self.selectedItems()
         if not selected_items:
@@ -283,7 +312,7 @@ class FileListWidget(QTreeWidget):
                     f"Deleted {success_count} of {len(selected_items)} items.",
                 )
 
-    def copy_selected(self):
+    def copy_selected(self) -> None:
         """Copy selected items to clipboard."""
         selected_items = self.selectedItems()
         self.clipboard_items = [
@@ -291,7 +320,7 @@ class FileListWidget(QTreeWidget):
         ]
         self.clipboard_operation = "copy"
 
-    def cut_selected(self):
+    def cut_selected(self) -> None:
         """Cut selected items to clipboard."""
         selected_items = self.selectedItems()
         self.clipboard_items = [
@@ -299,7 +328,7 @@ class FileListWidget(QTreeWidget):
         ]
         self.clipboard_operation = "cut"
 
-    def paste_selected(self):
+    def paste_selected(self) -> None:
         """Paste items from clipboard."""
         if not self.clipboard_items:
             return
@@ -324,10 +353,11 @@ class FileListWidget(QTreeWidget):
             QMessageBox.warning(
                 self,
                 "Partial Success",
-                f"Processed {success_count} of {len(self.clipboard_items)} items.",
+                f"Processed {success_count} of "
+                f"{len(self.clipboard_items)} items.",
             )
 
-    def show_properties(self):
+    def show_properties(self) -> None:
         """Show properties dialog for selected item."""
         item = self.currentItem()
         if not item:
@@ -345,21 +375,24 @@ Hidden: {"Yes" if file_item.is_hidden else "No"}"""
 
         QMessageBox.information(self, "Properties", info)
 
-    def filter_items(self, search_text: str):
+    def filter_items(self, search_text: str) -> None:
         """Filter items based on search text."""
         if not search_text:
             # Show all items
             for i in range(self.topLevelItemCount()):
-                self.topLevelItem(i).setHidden(False)
+                item = self.topLevelItem(i)
+                if item is not None:
+                    item.setHidden(False)
             return
 
         search_lower = search_text.lower()
         for i in range(self.topLevelItemCount()):
             item = self.topLevelItem(i)
-            name = item.text(0).lower()
-            item.setHidden(search_lower not in name)
+            if item is not None:
+                name = item.text(0).lower()
+                item.setHidden(search_lower not in name)
 
-    def toggle_hidden_files(self):
+    def toggle_hidden_files(self) -> None:
         """Toggle visibility of hidden files."""
         self.show_hidden = not self.show_hidden
         self.load_directory(self.current_path)
@@ -368,14 +401,14 @@ Hidden: {"Yes" if file_item.is_hidden else "No"}"""
 class MainWindow(QMainWindow):
     """Main application window."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.config = Config.load()
         self.setup_ui()
         self.setup_actions()
         self.apply_config()
 
-    def setup_ui(self):
+    def setup_ui(self) -> None:
         self.setWindowTitle("Flitz File Explorer")
         self.setGeometry(100, 100, 1000, 700)
 
@@ -390,9 +423,11 @@ class MainWindow(QMainWindow):
 
         # Up button
         self.up_button = QPushButton()
-        self.up_button.setIcon(
-            self.style().standardIcon(self.style().StandardPixmap.SP_ArrowUp)
-        )
+        style = self.style()
+        if style is not None:
+            self.up_button.setIcon(
+                style.standardIcon(style.StandardPixmap.SP_ArrowUp)
+            )
         self.up_button.setToolTip("Go up one level")
         self.up_button.clicked.connect(self.go_up)
         self.toolbar.addWidget(self.up_button)
@@ -413,7 +448,7 @@ class MainWindow(QMainWindow):
         self.file_list.path_changed.connect(self.on_path_changed)
         layout.addWidget(self.file_list)
 
-    def setup_actions(self):
+    def setup_actions(self) -> None:
         """Setup keyboard shortcuts and actions."""
         # Font size actions
         zoom_in_action = QAction("Zoom In", self)
@@ -435,16 +470,20 @@ class MainWindow(QMainWindow):
         # Toggle hidden files
         toggle_hidden_action = QAction("Toggle Hidden Files", self)
         toggle_hidden_action.setShortcut(QKeySequence("Ctrl+H"))
-        toggle_hidden_action.triggered.connect(self.file_list.toggle_hidden_files)
+        toggle_hidden_action.triggered.connect(
+            self.file_list.toggle_hidden_files
+        )
         self.addAction(toggle_hidden_action)
 
-    def apply_config(self):
+    def apply_config(self) -> None:
         """Apply configuration settings."""
         font = self.font()
         font.setPointSize(self.config.font_size)
         self.setFont(font)
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event: Optional[QKeyEvent]) -> None:
+        if event is None:
+            return
         if event.key() == Qt.Key.Key_Escape:
             if self.search_bar.isVisible():
                 self.search_bar.hide_search()
@@ -452,41 +491,41 @@ class MainWindow(QMainWindow):
         else:
             super().keyPressEvent(event)
 
-    def zoom_in(self):
+    def zoom_in(self) -> None:
         """Increase font size."""
         self.config.font_size = min(self.config.font_size + 1, 24)
         self.apply_config()
 
-    def zoom_out(self):
+    def zoom_out(self) -> None:
         """Decrease font size."""
         self.config.font_size = max(self.config.font_size - 1, 8)
         self.apply_config()
 
-    def show_search(self):
+    def show_search(self) -> None:
         """Show search bar."""
         self.search_bar.show_search()
 
-    def on_search(self, text: str):
+    def on_search(self, text: str) -> None:
         """Handle search request."""
         self.file_list.filter_items(text)
 
-    def on_search_escape(self):
+    def on_search_escape(self) -> None:
         """Handle escape in search bar."""
         self.search_bar.hide_search()
         self.file_list.filter_items("")  # Clear filter
 
-    def go_up(self):
+    def go_up(self) -> None:
         """Go up one directory level."""
         parent = self.file_list.current_path.parent
         if parent != self.file_list.current_path:
             self.file_list.load_directory(parent)
 
-    def on_path_changed(self, path: Path):
+    def on_path_changed(self, path: Path) -> None:
         """Handle path change."""
         self.address_bar.setText(str(path))
         self.up_button.setEnabled(path.parent != path)
 
-    def navigate_to(self, path: Path):
+    def navigate_to(self, path: Path) -> None:
         """Navigate to specified path."""
         if path.exists() and path.is_dir():
             self.file_list.load_directory(path)
@@ -494,13 +533,18 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", f"Invalid path: {path}")
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Flitz - A modern file explorer")
+    parser = argparse.ArgumentParser(
+        description="Flitz - A modern file explorer"
+    )
     parser.add_argument(
-        "path", nargs="?", default=".", help="Path to open (default: current directory)"
+        "path",
+        nargs="?",
+        default=".",
+        help="Path to open (default: current directory)",
     )
     parser.add_argument(
         "--version",

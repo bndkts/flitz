@@ -54,7 +54,7 @@ Documentation = "https://flitz.readthedocs.io"
 Repository = "https://github.com/bndkts/flitz"
 
 [tool.black]
-line-length = 88
+line-length = 79
 target-version = ['py38']
 
 [tool.isort]
@@ -75,6 +75,11 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

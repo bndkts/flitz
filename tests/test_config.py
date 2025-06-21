@@ -57,7 +57,10 @@ def test_load_config_with_external_config(monkeypatch):
             yaml.dump(external_data, f)
 
         # Create main config referencing external
-        main_data = {"font_size": 16, "external_config": [str(external_config_path)]}
+        main_data = {
+            "font_size": 16,
+            "external_config": [str(external_config_path)],
+        }
         with open(config_path, "w") as f:
             yaml.dump(main_data, f)
 
